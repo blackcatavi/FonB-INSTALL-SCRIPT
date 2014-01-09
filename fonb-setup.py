@@ -531,7 +531,7 @@ class FreePBX(object):
 		return os.access("/etc/freepbx.conf", os.R_OK) and os.access("/var/www/html/admin/modules/", os.W_OK)
 	def install(self):
 		if self.check():
-			download(self.url)
+			download(self.url, "/tmp/master.zip")
 			archive = zipfile.ZipFile(os.path.join("/tmp", self.url.split("/")[-1]))
 			if os.path.exists("/var/www/html/admin/modules/fonbadmin"):
 				shutil.rmtree("/var/www/html/admin/modules/fonbadmin")
