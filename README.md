@@ -1,11 +1,10 @@
 This Python script can download and install PhoneB and required dependencies.
 
------
 Usage
 ------
 `python fonb-install.py -i`
 
--------
+
 Options
 -------
 
@@ -23,7 +22,7 @@ Options
   -v, --version         Show installation script version
   -f, --freepbx         Install Freepbx module
 
-------
+
 Requirements
 ------
 - Python 2.x (Tested on Python 2.4, 2.5, 2.6 and 2.7)
