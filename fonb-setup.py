@@ -54,6 +54,16 @@ class Install(object):
 						log(error)
 						Errors.append(error)
 		self.create_config_files()
+
+		active_calls = ActiveCallsSetup()
+		log("Modifying %s for setting up Active Calls" % active_calls.config_file)
+		if active_calls.setup():
+			log("%s successfully modified." % active_calls.config_file)
+		else:
+			error = "[ WARNING ]: Couldn't modify %s. Active Calls wont work without it. Check %s for details" % (active_calls.config_file, "https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/INSTALLATION.md#59-modify-extensions_customconf-to-enable-active-calls")
+			Errors.append(error)
+			log(error)
+
 		log("Creating init.d script")
 		self.create_init_script()
 		log("PhoneB installation completed.")
@@ -138,8 +148,10 @@ class Install(object):
 		"""
 		Sets up general setup parameters for FonB
 		"""
+		global Errors
 		config = FonbConfigParser()
 		log("Creating phoneb.cfg file")
+		cdr_setup = CDRSettings()
 		data = {
 			"PhoneB" : {
 				"BaseDir" : self.INSTALL_PATH,
@@ -163,8 +175,17 @@ class Install(object):
 			},
 			"MysqlFonB": MySQLSettings().get(),
 			"AMI" : AMISettings().get(),
-			"MysqlCdr" : CDRSettings().get(),
+			"MysqlCdr" : cdr_setup.get(),
 		}
+		cdr_columns_added = False
+		if data["MysqlFonB"]["Username"] == "root":
+			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlFonB"]["Username"], data["MysqlFonB"]["Password"], data["MysqlCdr"]["Database"])
+		if not cdr_columns_added:
+			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlCdr"]["Username"], data["MysqlCdr"]["Password"], data["MysqlCdr"]["Database"])		
+			if not cdr_columns_added:
+				error = "[ WARNING ]: Couldn't alter cdr table and add columns for highrise notes. May be columns already exist. If they don't,  check https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/INSTALLATION.md#58-modify-asterisk-mysql-cdr-db-for-highrise-entries for how to set them up manually."
+				Errors.append(error)
+				log(error)
 		self.PHP_CGI_PATH = data["PhoneB"]["PhpCgiPath"]
 		config.parse_dict_to_config(data)
 		file = open(os.path.join(config_path, "phoneb.cfg"), "w")
@@ -216,8 +237,7 @@ class Install(object):
 							config.set(section, "Name", callerid.split()[:-1][0])
 						else:
 							config.set(section, "Name", "")
-						config.set(section, "; If you have free license you can set passwords for no more than 5 extensions.", "")
-						config.set(section, "Password", "")
+						config.set(section, ";Password", "set the password, only 5 users can have password in a demo license.")
 						config.set(section, "Mobile", "")
 						config.set(section, "BaseDir", self.INSTALL_PATH)
 						config.set(section, "Language", "en")
@@ -263,9 +283,39 @@ class FonbConfigParser(RawConfigParser):
 		Parse a dictionary to build config file sections and values
 		"""
 		for section, options in data.iteritems():
-			self.add_section(section)
+			if section not in self.sections():
+				self.add_section(section)
 			for key,value in options.iteritems():
 				self.set(section, key, value)
+	def add_comment(self, section, comment):
+		self.set(section, '; %s' % (comment,), None)
+
+	def write(self, fp):
+		"""Write an .ini-format representation of the configuration state."""
+		if self._defaults:
+			fp.write("[%s]\n" % ConfigParser.DEFAULTSECT)
+			for (key, value) in self._defaults.items():
+				self._write_item(fp, key, value)
+			fp.write("\n")
+		for section in self._sections:
+			fp.write("[%s]\n" % section)
+			for (key, value) in self._sections[section].items():
+				self._write_item(fp, key, value)
+			fp.write("\n")
+
+	def set_bulk(self, section, values):
+		if isinstance(values, list):
+			for value in values:
+				self.set(section, value, None)
+		elif isinstance(values, dict):
+			for key, value in values.iteritems():
+				self.set(section, key, value)
+			
+	def _write_item(self, fp, key, value):
+		if value is None:
+			fp.write("%s\n" % (key,))
+		elif key != "__name__":
+			fp.write("%s = %s\n" % (key, str(value).replace('\n', '\n\t')))
 
 class AMISettings(object):
 	"""
@@ -319,6 +369,7 @@ class CDRSettings(object):
 		"""
 
 		"""
+		global Errors
 		cdr_config_path = self.cdr_config_path
 		data = {
 			'Username' : '',
@@ -342,12 +393,23 @@ class CDRSettings(object):
 			data['Hostname'] = self.config.get("global", "hostname")
 			data['Database'] = self.config.get("global", "dbname")
 		else:
-			log("Skipping cdr configuration. You can set it up manually later.")
+			error = "[ ERROR ]: Couldn't read CDR settings. Call history wont work without it. Set it up manually in /etc/phoneb/phoneb.conf"
+			Errors.append(error)
+			log(error)
 		return data
+
+	def add_highrise_columns(self, username, password, database):
+		 db = Mysql(username, password, database)
+		 status = db.has_column("cdr", "FonBCallUniqueID") or db.query("ALTER TABLE cdr ADD FonBCallUniqueID VARCHAR(80) NOT NULL;") == 0
+		 status = status and (db.has_column("cdr", "FonBCallNotes") or db.query("ALTER TABLE cdr ADD FonBCallNotes VARCHAR(80) NOT NULL;") == 0)
+		 status = status and (db.has_column("cdr", "FonBHighriseNoteID") or db.query("ALTER TABLE cdr ADD FonBHighriseNoteID VARCHAR(80) NOT NULL;") == 0)
+		 return status
+
 
 class MySQLSettings(object):
 	def __init__(self):
 		log("Configuring FonB database")
+
 
 	def get(self):
 		log("FonB needs access to a MySQL database to store data. Please provide MySQL username, password and database name.")
@@ -357,21 +419,19 @@ class MySQLSettings(object):
 			"Database" : raw_input("Database Name[fonb]:") or "fonb",
 			"Hostname" : raw_input("Hostname[localhost]:") or "localhost",
 		}
+		self.db = Mysql(data["Username"], data["Password"])
 		if data['Username'] == 'root' and data['Hostname'] == 'localhost':
-			self.create_db(**data)
+			self.create_db(data["Database"])
 		elif data['Hostname'] == 'localhost':
 			self.check_db(**data)
 		else:
 			log("Couldn't verify MySQL credentials. We hope they were alright.")
 		return data
 
-	def create_db(self, Password, Database, **kwargs):
+	def create_db(self, database_name):
 		global Errors
 		log("Woohoo! got root access to MySQL. Trying to create fonb database.")
-		if Password:
-			return_code = os.system("mysql -u root -p'%s' -e \"create database if not exists %s;\"" % (Password, Database))
-		else:
-			return_code = os.system("mysql -u root -e \"create database if not exists %s;\"" % (Database))
+		return_code = self.db.query("create database if not exists %s;" % (database_name))
 		if return_code != 0:
 			error = "[ ERROR ]: Problem in creating database. Check your MySQL credentials."
 			Errors.append(error)
@@ -492,13 +552,13 @@ class LameCheck(object):
 
 	def get_path(self):
 		log("Checking lame installation")
-		return_code = os.system("%s --help > /dev/nul" % self.lame_path)
+		return_code = os.system("%s --help > /dev/null" % self.lame_path)
 		if return_code == 0:
 			log("PhoneB lame is working fine. No need to compile.")
 			return self.lame_path
 		else:
 			system_lame_path = spawn.find_executable("lame")
-			if system_lame_path and os.system("%s --help > /dev/nul" % system_lame_path) == 0:
+			if system_lame_path and os.system("%s --help > /dev/null" % system_lame_path) == 0:
 				log("System already has lame available. Skipping compilation.")
 				return system_lame_path
 			else:
@@ -514,6 +574,94 @@ class LameCheck(object):
 			error = "[ ERROR ]: Couldn't compile lame properly. Call recording wont work without lame."
 			log(error)
 			Errors.append(error)
+
+class ActiveCallsSetup(object):
+	"""
+	See https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/INSTALLATION.md#59-modify-extensions_customconf-to-enable-active-calls
+	
+	Reads /etc/asterisk/extensions_custom.conf
+	and appends following:
+	[OnHold]
+	exten => s,1,Answer()
+	;exten => s,2,MusicOnHold()
+	exten => s,2,Hangup
+
+	exten => hold,1,Answer()
+	exten => hold,n,MusicOnHold(,3600)
+	exten => hold,n,Hangup
+
+	exten => wait,1,NoCDR()
+	exten => wait,n,StopMixMonitor()
+	exten => wait,n,Answer()
+	exten => wait,n,UserEvent(FonBCallSwitch,Channel: ${CHANNEL(name)})
+	exten => wait,n,Wait(50)
+	exten => wait,n,Hangup
+
+	[Conference]
+	exten =>  Conference,1,MeetMe(${MEETME_ROOMNUM},dqMx)
+
+	;Conference test extension: admin
+	exten =>  admin,1,MeetMe(${MEETME_ROOMNUM},qdMxp)
+	exten =>  admin,n,MeetMeAdmin(${MEETME_ROOMNUM},K)
+
+	[Hangup]
+	exten => Hangup,1,NoCDR()
+	exten => Hangup,n,Hangup()
+	"""
+	
+	def __init__(self, config_file="/etc/asterisk/extensions_custom.conf"):
+		self.can_access = False
+		self.config_file = config_file
+		self.set_config_parser()
+
+	def set_config_parser(self):
+		config_parser = FonbConfigParser()
+		if os.access(self.config_file, os.W_OK) or (os.access("/etc/asterisk", os.W_OK) and not os.path.exists(self.config_file)):
+			self.can_access = True
+			try:
+				config_parser.read(self.config_file)
+				self.config_parser = config_parser
+			except:
+				pass
+
+	def setup(self):
+
+		if self.can_access:
+			file_sections = self.config_parser.sections()
+			for section in ["OnHold", "Conference", "Hangup"]:
+				if section not in file_sections:
+					self.config_parser.add_section(section)
+			self.config_parser.set_bulk("OnHold", [
+				"exten => s,1,Answer()",
+				";exten => s,2,MusicOnHold()",
+				"exten => s,2,Hangup",
+				"exten => hold,1,Answer()",
+				"exten => hold,n,MusicOnHold(,3600)",
+				"exten => hold,n,Hangup",
+				"exten => wait,1,NoCDR()",
+				"exten => wait,n,StopMixMonitor()",
+				"exten => wait,n,Answer()",
+				"exten => wait,n,UserEvent(FonBCallSwitch,Channel: ${CHANNEL(name)})",
+				"exten => wait,n,Wait(50)",
+				"exten => wait,n,Hangup",
+				])
+			self.config_parser.set_bulk("Conference", [
+				"exten =>  Conference,1,MeetMe(${MEETME_ROOMNUM},dqMx)",
+				";Conference test extension: admin",
+				"exten =>  admin,1,MeetMe(${MEETME_ROOMNUM},qdMxp)",
+				"exten =>  admin,n,MeetMeAdmin(${MEETME_ROOMNUM},K)",
+				])
+			self.config_parser.set_bulk("Hangup", [
+				"exten => Hangup,1,NoCDR()",
+				"exten => Hangup,n,Hangup()",
+				])
+			fp = open(self.config_file, "w")
+			self.config_parser.write(fp)
+			fp.close()
+			return True
+		else:
+			return False
+
 
 def init_script(demon_path):
 	"""
@@ -676,6 +824,48 @@ def compile_php(path):
 	else:
 		error = "[ ERROR ]: Couldn't compiled php properly. Please compile it manually. Check https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/TIPS.md#phpcompilation for the procedure."
 		return False
+
+
+class Mysql(object):
+	"""
+	A very pathetic hack to query mysql
+	"""
+	def __init__(self, username, password, database="mysql"):
+		self.username = username
+		self.password = password
+		self.database = database
+
+	def query(self, query):
+		if self.password:
+			command = "mysql -u %s -p'%s' %s -e '%s' > /dev/null 2>&1" % (self.username, self.password, self.database, query)
+			response = os.system(command)
+			#log("Executed command %s. Response: \n %s" % (command, response))
+			return response
+		else:
+			command = "mysql -u %s %s -e '%s' > /dev/null 2>&1" % (self.username, self.database, query)
+			response = os.system(command)
+			#log("Executed command %s. Response: \n %s" % (command, response))
+			return response
+
+	def result(self, query):
+		if self.password:
+			command = "mysql -u %s -p'%s' %s -e '%s'" % (self.username, self.password, self.database, query)
+			response = os.popen(command)
+			#log("Executed command %s. Response: \n %s" % (command, response))
+			return response
+		else:
+			command = "mysql -u %s %s -e '%s'" % (self.username, self.database, query)
+			response = os.popen(command)
+			#log("Executed command %s. Response: \n %s" % (command, response))
+			return response
+
+	def has_column(self, table, column):
+		query = "SHOW COLUMNS FROM %s LIKE \"%s\";" % (table, column)
+		response = self.result(query)
+		if len(response.readlines()) > 1:
+			return True
+		else:
+			return False
 
 log_file = open("fonb-setup.log", "w")
 
