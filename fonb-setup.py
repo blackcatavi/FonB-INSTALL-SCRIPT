@@ -151,6 +151,7 @@ class Install(object):
 		global Errors
 		config = FonbConfigParser()
 		log("Creating phoneb.cfg file")
+		config.read("/etc/phoneb/phoneb.cfg")
 		cdr_setup = CDRSettings()
 		data = {
 			"PhoneB" : {
