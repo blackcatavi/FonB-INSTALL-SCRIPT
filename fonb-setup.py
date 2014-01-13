@@ -72,8 +72,7 @@ class Install(object):
 		log("Checking glibc requirement")
 		GlibcCheck(self.INSTALL_PATH).check()
 		self.add_mobile_config()
-		log("Attempting to activate phoneb")
-		os.system(os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate"))
+		self.activate()
 		log("Trying to start phoneb. By executing /etc/init.d/phoneb start")
 		result  = os.system("/etc/init.d/phoneb restart")
 		if result == 0:
@@ -95,6 +94,13 @@ class Install(object):
 			log("Installation messages have been logged to fonb-setup.log. If problems occured during installation include this file in your bug report.")
 		else:
 			log("Error occured in starting PhoneB. Try running this script with root privilleges or setup init.d script manually.")
+
+	def activate(self):
+		config_parser = FonbConfigParser()
+		config_parser.read("/etc/phoneb/phoneb.cfg")
+		if not (config_parser.has_section("Demo_License_FonB_V1") or config_parser.has_section("License_FonB_V1") or config_parser.has_section("License_FonB_Mobile_V1") or config_parser.has_section("License_FonB_Highrise_V1") ):
+			log("Attempting to activate phoneb")
+			os.system(os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate"))
 
 	def create_init_script(self):
 		"""
@@ -317,6 +323,10 @@ class FonbConfigParser(RawConfigParser):
 			fp.write("%s\n" % (key,))
 		elif key != "__name__":
 			fp.write("%s = %s\n" % (key, str(value).replace('\n', '\n\t')))
+
+	def get(self, section, option):
+		val = RawConfigParser.get(self, section, option)
+		return val.strip('"').strip("'")
 
 class AMISettings(object):
 	"""
@@ -659,6 +669,8 @@ class ActiveCallsSetup(object):
 			fp = open(self.config_file, "w")
 			self.config_parser.write(fp)
 			fp.close()
+			log("Restarting asterisk")
+			os.system("service asterisk restart")
 			return True
 		else:
 			return False
@@ -868,6 +880,68 @@ class Mysql(object):
 		else:
 			return False
 
+class Uninstall(object):
+	"""
+	Deletes phoneb basedir, freepbx module and drops database
+	"""
+	def __init__(self):
+		self.error_happened = False
+		self.config_parser = FonbConfigParser()
+		self.can_read = self.config_parser.read("/etc/phoneb/phoneb.cfg")
+		if not self.can_read:
+			self.error_happened = True
+			log("[ ERROR ]: /etc/phoneb/phoneb.cfg not found.")
+		else:
+			self.remove_base_dir()
+			self.remove_db()
+			self.remove_freepbx()
+			self.remove_init()
+		if self.error_happened:
+			log("[ ERROR ]: Uninstall finished with errors.")
+		else:
+			log("FonB Uninstalled succesfully.")
+
+	def remove_base_dir(self):
+		base_dir = self.config_parser.get("PhoneB", "BaseDir")
+		log("Deleting files in %s" % base_dir)
+		try:
+			shutil.rmtree(base_dir)
+		except:
+			log("[ ERROR ]: Basedir %s either doesn't exist or permissions denied." % base_dir)
+			self.error_happened = True
+
+	def remove_db(self):
+		username = self.config_parser.get("MysqlFonB", "Username")
+		if username:
+			log("Dropping database.")
+			database = self.config_parser.get("MysqlFonB", "Database")
+			db = Mysql(username,self.config_parser.get("MysqlFonB", "Password"),database)
+			response = db.query("drop database %s;" % database)
+			if response != 0:
+				log("[ ERROR ]: Couldn't drop database %s" % database)
+				self.error_happened = True
+			else:
+				log("Database dropped.")
+		else:
+			log("[ ERROR ]: Username not found in phoneb.cfg")
+			self.error_happened = True
+
+	def remove_freepbx(self):
+		if os.path.exists("/var/www/html/admin/modules/fonbadmin"):
+			log("Uninstalling Freepbx module...")
+			return_code = os.system("amportal a ma uninstall fonbadmin")
+			if return_code == 0:
+				os.system("amportal a ma reload")
+			else:
+				log("[ ERROR ]: Something didn't go well while removing freepbx FonB module.")
+				self.error_happened = True
+
+	def remove_init(self):
+		if os.access("/etc/init.d/phoneb", os.W_OK):
+			log("Removing init script")
+			os.remove("/etc/init.d/phoneb")
+			log("init script removed")
+
 log_file = open("fonb-setup.log", "w")
 
 def log(message):
@@ -888,6 +962,7 @@ if __name__ == "__main__":
 	parser.add_option('-c', '--prefix', nargs=1, metavar='/path/where/php/will/be/compiled', help="Downloads and compiles php with FonB specific requirements.")
 	parser.add_option('-v', '--version', action="store_true", help = "Show installation script version")
 	parser.add_option('-f', '--freepbx', action="store_true", help = "Install Freepbx module")
+	parser.add_option('-u', '--uninstall', action="store_true", help = "Uninstall FonB")
 	cmd_args, crap = parser.parse_args()
 
 	"""
@@ -910,6 +985,8 @@ if __name__ == "__main__":
 		log(init_script(cmd_args.init))
 	elif cmd_args.php:
 		php_requirements(cmd_args.php)
+	elif cmd_args.uninstall:
+		Uninstall()
 	elif cmd_args.compile_php:
 		compile_php(cmd_args.compile_php)
 		log(os.path.join(cmd_args.compile_php, "bin", "php-cgi"))
