@@ -167,7 +167,7 @@ class Install(object):
 			"WebSocket": {
 				"Debug" : "0",
 				"EnableAmiUpdates" : "0",
-				"EnableSummaryUpdates" : "0",
+				"EnableSummaryUpdates" : "1",
 				"EnableHangupUpdates" : "0",
 				"EnableFeedbackUpdates" : "0",
 				"EnableErrorUpdates" : "0",
