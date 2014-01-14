@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, urllib2, tarfile, zipfile, os, getpass, stat, StringIO, platform, shutil, glob
+import sys, urllib2, tarfile, zipfile, os, getpass, stat, StringIO, platform, shutil, glob, re
 from optparse import OptionParser
 from distutils import spawn
 from ConfigParser import RawConfigParser
@@ -285,6 +285,7 @@ def version():
 class FonbConfigParser(RawConfigParser):
 	optionxform = str
 	allow_no_value = True
+	ordered_sections = dict()
 	def parse_dict_to_config(self, data):
 		"""
 		Parse a dictionary to build config file sections and values
@@ -306,14 +307,19 @@ class FonbConfigParser(RawConfigParser):
 			fp.write("\n")
 		for section in self._sections:
 			fp.write("[%s]\n" % section)
+			if section in self.ordered_sections:
+				for key in self.ordered_sections[section]:
+					self._write_item(fp, key, None)
+					self.remove_option(section, key)
 			for (key, value) in self._sections[section].items():
 				self._write_item(fp, key, value)
 			fp.write("\n")
 
 	def set_bulk(self, section, values):
 		if isinstance(values, list):
-			for value in values:
-				self.set(section, value, None)
+			if not self.has_section(section):
+				self.add_section(section)
+			self.ordered_sections[section] = values
 		elif isinstance(values, dict):
 			for key, value in values.iteritems():
 				self.set(section, key, value)
@@ -630,6 +636,11 @@ class ActiveCallsSetup(object):
 		if os.access(self.config_file, os.W_OK) or (os.access("/etc/asterisk", os.W_OK) and not os.path.exists(self.config_file)):
 			self.can_access = True
 			try:
+				config_parser.OPTCRE = re.compile(
+			        r'(?P<option>[^\[]*)'          
+			        r'(?P<vi>[^\[]*)'              
+			        r'(?P<value>[^\[]*)$'
+			        )
 				config_parser.read(self.config_file)
 				self.config_parser = config_parser
 			except:
