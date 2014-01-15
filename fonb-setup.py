@@ -608,7 +608,7 @@ class ActiveCallsSetup(object):
 	exten => hold,n,Hangup
 
 	exten => wait,1,NoCDR()
-	exten => wait,n,StopMixMonitor()
+	;exten => wait,n,StopMixMonitor()
 	exten => wait,n,Answer()
 	exten => wait,n,UserEvent(FonBCallSwitch,Channel: ${CHANNEL(name)})
 	exten => wait,n,Wait(50)
@@ -661,7 +661,7 @@ class ActiveCallsSetup(object):
 				"exten => hold,n,MusicOnHold(,3600)",
 				"exten => hold,n,Hangup",
 				"exten => wait,1,NoCDR()",
-				"exten => wait,n,StopMixMonitor()",
+				";exten => wait,n,StopMixMonitor()",
 				"exten => wait,n,Answer()",
 				"exten => wait,n,UserEvent(FonBCallSwitch,Channel: ${CHANNEL(name)})",
 				"exten => wait,n,Wait(50)",
