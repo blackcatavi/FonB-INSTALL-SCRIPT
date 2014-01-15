@@ -20,6 +20,7 @@ Options
                         Validates php requirements for FonB. Expects php-cgi
                         path as argument.
                         
+                        
   -c /path/where/php/will/be/compiled, --prefix=/path/where/php/will/be/compiled
                         Downloads and compiles php with FonB specific
                         requirements.
