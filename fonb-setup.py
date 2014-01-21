@@ -231,15 +231,24 @@ class Install(object):
 					pass
 			for section in exisiting_extensions_parser.sections():
 				if section.isdigit():
-					terminal = exisiting_extensions_parser.get(section, "dial")
-					context = exisiting_extensions_parser.get(section, "context")
+					terminal = ""
+					context = ""
+					try:
+						terminal = exisiting_extensions_parser.get(section, "dial")
+						context = exisiting_extensions_parser.get(section, "context")
+					except:
+						pass
 					if terminal and context:
 						log("Found extension: %s" % section)
 						config.add_section(section)
 						config.set(section, "Extension", section)
 						config.set(section, "Terminal", terminal)
 						config.set(section, "Context", context)
-						callerid = exisiting_extensions_parser.get(section, "callerid")
+						callerid = ""
+						try:
+							callerid = exisiting_extensions_parser.get(section, "callerid")
+						except:
+							pass
 						if callerid:
 							config.set(section, "Name", callerid.split()[:-1][0])
 						else:
