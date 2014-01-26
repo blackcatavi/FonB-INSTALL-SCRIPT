@@ -166,7 +166,8 @@ class Install(object):
 				"ListenPort" : raw_input("FonB Server Port[%s]:" % self.PORT) or self.PORT,
 				"LameExec" : LameCheck(self.INSTALL_PATH).get_path(),
 				"Debug" : "0",
-				"PhpCgiPath" : self.PHP_CGI_PATH
+				"PhpCgiPath" : self.PHP_CGI_PATH,
+				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
 			},
 			"WebServer" : {
 				"Debug" : "0"
