@@ -654,7 +654,7 @@ class ActiveCallsSetup(object):
 				config_parser.read(self.config_file)
 				self.config_parser = config_parser
 			except:
-				pass
+				self.config_parser = config_parser
 
 	def setup(self):
 
