@@ -72,13 +72,13 @@ class Install(object):
 				"Debug" : "0"
 			},
 			"WebSocket": {
-				"Debug" : "0",
-				"EnableAmiUpdates" : "0",
+				"Debug" : "1",
+				"EnableAmiUpdates" : "1",
 				"EnableSummaryUpdates" : "1",
-				"EnableHangupUpdates" : "0",
-				"EnableFeedbackUpdates" : "0",
-				"EnableErrorUpdates" : "0",
-				"EnableClientActionUpdates" : "0"
+				"EnableHangupUpdates" : "1",
+				"EnableFeedbackUpdates" : "1",
+				"EnableErrorUpdates" : "1",
+				"EnableClientActionUpdates" : "1"
 			},
 			#"MysqlFonB": MySQLSettings().get(),
 			"AMI" : AMISettings().get(),

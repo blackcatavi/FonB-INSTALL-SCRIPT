@@ -165,21 +165,21 @@ class Install(object):
 				"UsersConfFile" : os.path.join(config_path, "users.cfg"),
 				"ListenPort" : raw_input("FonB Server Port[%s]:" % self.PORT) or self.PORT,
 				"LameExec" : LameCheck(self.INSTALL_PATH).get_path(),
-				"Debug" : "0",
+				"Debug" : "1",
 				"PhpCgiPath" : self.PHP_CGI_PATH,
 				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
 			},
 			"WebServer" : {
-				"Debug" : "0"
+				"Debug" : "1"
 			},
 			"WebSocket": {
-				"Debug" : "0",
-				"EnableAmiUpdates" : "0",
+				"Debug" : "1",
+				"EnableAmiUpdates" : "1",
 				"EnableSummaryUpdates" : "1",
-				"EnableHangupUpdates" : "0",
-				"EnableFeedbackUpdates" : "0",
-				"EnableErrorUpdates" : "0",
-				"EnableClientActionUpdates" : "0"
+				"EnableHangupUpdates" : "1",
+				"EnableFeedbackUpdates" : "1",
+				"EnableErrorUpdates" : "1",
+				"EnableClientActionUpdates" : "1"
 			},
 			"MysqlFonB": MySQLSettings().get(),
 			"AMI" : AMISettings().get(),
