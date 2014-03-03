@@ -2,7 +2,7 @@ This Python script can download and install PhoneB and required dependencies.
 
 Usage
 ------
-`python fonb-install.py -i`
+`python fonb-setup.py -i`
 
 
 Options
