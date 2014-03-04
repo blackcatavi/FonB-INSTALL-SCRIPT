@@ -159,6 +159,7 @@ class Install(object):
 		log("Creating phoneb.cfg file")
 		config.read("/etc/phoneb/phoneb.cfg")
 		cdr_setup = CDRSettings()
+		mysql_settings = MySQLSettings()
 		data = {
 			"PhoneB" : {
 				"BaseDir" : self.INSTALL_PATH,
@@ -181,13 +182,15 @@ class Install(object):
 				"EnableErrorUpdates" : "1",
 				"EnableClientActionUpdates" : "1"
 			},
-			"MysqlFonB": MySQLSettings().get(),
+			"MysqlFonB": mysql_settings.get(),
 			"AMI" : AMISettings().get(),
 			"MysqlCdr" : cdr_setup.get(),
 		}
 		cdr_columns_added = False
 		if data["MysqlFonB"]["Username"] == "root":
 			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlFonB"]["Username"], data["MysqlFonB"]["Password"], data["MysqlCdr"]["Database"])
+			log("fixing old passwords error")
+			mysql_settings.fixOldPasswords()
 		if not cdr_columns_added:
 			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlCdr"]["Username"], data["MysqlCdr"]["Password"], data["MysqlCdr"]["Database"])		
 			if not cdr_columns_added:
@@ -454,6 +457,36 @@ class MySQLSettings(object):
 		else:
 			log("Couldn't verify MySQL credentials. We hope they were alright.")
 		return data
+
+	def fixOldPasswords(self):
+		config_parser = FonbConfigParser()
+		file_read = config_parser.read("/etc/my.cnf")
+		old_passwords = False
+		if file_read:
+			try:
+				if config_parser.get("mysqld", "old_passwords") == '1':
+					log("Problem found. Trying to fix")
+					config_parser.set("mysqld", "old_passwords", "0")
+					old_passwords =  True
+			except:
+				pass
+			if old_passwords and os.access("/etc/my.cnf", os.W_OK):
+				mysql_conf_file = open("/etc/my.cnf", "w")
+				config_parser.write(mysql_conf_file)
+				mysql_conf_file.close()
+				os.system("service mysqld restart")
+				fixed = self.db.query("UPDATE mysql.user SET Password = PASSWORD('%s') WHERE user = '%s';" % (self.db.password, self.db.username))
+				mysql_conf_file.close()
+				if fixed:
+					log("Old password error fixed")
+				else:
+					global Errors
+					Errors.append("[ ERROR ]: Old passwords set in /etc/my.cnf check https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/TIPS.md#mysqlautherror for details on how to fix it.")
+					log("Error occured in fixing old passwords error")
+			elif old_passwords == False:
+				log("No old passwords problem found.")
+			else:
+				log("Write permissions denied in /etc/my.cnf")
 
 	def create_db(self, database_name):
 		global Errors
@@ -786,7 +819,6 @@ def php_requirements(php_cgi_path):
 		"curl",
 		"date",
 		"dom",
-		"json",
 		"libxml",
 		"mysql",
 		"openssl",

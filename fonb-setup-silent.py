@@ -64,12 +64,12 @@ class Install(object):
 				"UsersConfFile" : os.path.join(config_path, "users.cfg"),
 				"ListenPort" : self.PORT,
 				"LameExec" : LameCheck(self.INSTALL_PATH).get_path(),
-				"Debug" : "0",
+				"Debug" : "1",
 				"PhpCgiPath" : self.PHP_CGI_PATH,
 				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
 			},
 			"WebServer" : {
-				"Debug" : "0"
+				"Debug" : "1"
 			},
 			"WebSocket": {
 				"Debug" : "1",
