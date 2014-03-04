@@ -89,7 +89,7 @@ class Install(object):
 			log("If for some reason, phoneb doesn't show up on browser, try executing %s manually to debug errors." % os.path.join(self.INSTALL_PATH,"bin", "phoneb"))
 			log("You can restart phoneb by running 'service phoneb restart'")
 			log("To setup passwords for extensions edit '/etc/phoneb/users.cfg'")
-			log("To activate phoneb with licenses use '%s'" % os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate"))
+			log("To activate phoneb with licenses use '%s'" % os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate \"your license key here\""))
 			log("To report bugs or to find further documentation visit http://aptus.com")
 			log("Installation messages have been logged to fonb-setup.log. If problems occured during installation include this file in your bug report.")
 		else:
@@ -100,7 +100,7 @@ class Install(object):
 		config_parser.read("/etc/phoneb/phoneb.cfg")
 		if not (config_parser.has_section("Demo_License_FonB_V1") or config_parser.has_section("License_FonB_V1") or config_parser.has_section("License_FonB_Mobile_V1") or config_parser.has_section("License_FonB_Highrise_V1") ):
 			log("Attempting to activate phoneb")
-			os.system(os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate"))
+			os.system(os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate Demo_License_FonB_V1"))
 
 	def create_init_script(self):
 		"""
@@ -475,15 +475,18 @@ class MySQLSettings(object):
 				config_parser.write(mysql_conf_file)
 				mysql_conf_file.close()
 				os.system("service mysqld restart")
-				query = "UPDATE mysql.user SET Password = PASSWORD('%s') WHERE user = '%s';" % (self.db.password, self.db.username)
+				query = 'UPDATE mysql.user SET Password = PASSWORD("%s") WHERE user = "%s;"' % (self.db.password, self.db.username)
 				fixed = self.db.query(query) == 0 and self.db.query("FLUSH PRIVILEGES;") == 0
-				mysql_conf_file.close()
 				if fixed:
 					log("Old password error fixed")
 				else:
 					global Errors
 					Errors.append("[ ERROR ]: Old passwords set in /etc/my.cnf check https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/TIPS.md#mysqlautherror for details on how to fix it. Query: %s" % query)
 					log("Error occured in fixing old passwords error")
+					config_parser.set("mysqld", "old_passwords", "1")
+					mysql_conf_file = open("/etc/my.cnf", "w")
+					config_parser.write(mysql_conf_file)
+					mysql_conf_file.close()
 			elif old_passwords == False:
 				log("No old passwords problem found.")
 			else:
