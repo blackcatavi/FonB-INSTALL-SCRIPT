@@ -573,7 +573,7 @@ class IoncubeSettings(object):
 		if output == "FonB Error":
 			log("Ioncube succesfully setup.")
 		else:
-			log("Couldn't setup ioncube loader.")
+			log("Couldn't setup ioncube loader. Command used to verify: %s" % command)
 			Errors.append("[ ERROR ]: Couldn't setup ioncube manually. Please set it up manually in %s." % (os.path.join(php_path, "php.ini")))
 
 	def get_php_version(self, php_cgi_path="php-cgi"):
@@ -825,7 +825,8 @@ def php_requirements(php_cgi_path):
 		"SimpleXML",
 		"xml",
 		"xmlreader",
-		"xmlwriter"
+		"xmlwriter",
+		"json",
 	]
 	missing_modules = [module for module in required_modules if module not in php_modules]
 	if len(missing_modules) > 0:
