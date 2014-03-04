@@ -475,13 +475,14 @@ class MySQLSettings(object):
 				config_parser.write(mysql_conf_file)
 				mysql_conf_file.close()
 				os.system("service mysqld restart")
-				fixed = self.db.query("UPDATE mysql.user SET Password = PASSWORD('%s') WHERE user = '%s';" % (self.db.password, self.db.username))
+				query = "UPDATE mysql.user SET Password = PASSWORD('%s') WHERE user = '%s';" % (self.db.password, self.db.username)
+				fixed = self.db.query(query) == 0 && self.db.query("FLUSH PRIVILEGES;") == 0
 				mysql_conf_file.close()
 				if fixed:
 					log("Old password error fixed")
 				else:
 					global Errors
-					Errors.append("[ ERROR ]: Old passwords set in /etc/my.cnf check https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/TIPS.md#mysqlautherror for details on how to fix it.")
+					Errors.append("[ ERROR ]: Old passwords set in /etc/my.cnf check https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/TIPS.md#mysqlautherror for details on how to fix it. Query: %s" % query)
 					log("Error occured in fixing old passwords error")
 			elif old_passwords == False:
 				log("No old passwords problem found.")
