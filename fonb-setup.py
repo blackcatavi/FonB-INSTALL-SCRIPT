@@ -475,7 +475,7 @@ class MySQLSettings(object):
 				config_parser.write(mysql_conf_file)
 				mysql_conf_file.close()
 				os.system("service mysqld restart")
-				query = 'UPDATE mysql.user SET Password = PASSWORD("%s") WHERE user = "%s;"' % (self.db.password, self.db.username)
+				query = 'UPDATE mysql.user SET Password = PASSWORD("%s") WHERE user = "%s";' % (self.db.password, self.db.username)
 				fixed = self.db.query(query) == 0 and self.db.query("FLUSH PRIVILEGES;") == 0
 				if fixed:
 					log("Old password error fixed")
