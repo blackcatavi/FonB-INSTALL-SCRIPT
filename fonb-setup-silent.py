@@ -41,7 +41,7 @@ class Install(object):
 		config_parser.read("/etc/phoneb/phoneb.cfg")
 		if not (config_parser.has_section("Demo_License_FonB_V1") or config_parser.has_section("License_FonB_V1") or config_parser.has_section("License_FonB_Mobile_V1") or config_parser.has_section("License_FonB_Highrise_V1") ):
 			log("Attempting to activate phoneb")
-			os.system(os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate"))
+			os.system(os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate Demo_License_FonB_V1"))
 	
 
 	def create_config_files(self):
@@ -58,6 +58,7 @@ class Install(object):
 		log("Creating phoneb.cfg file")
 		config.read("/etc/phoneb/phoneb.cfg")
 		cdr_setup = CDRSettings()
+		mysql_settings = MySQLSettings()
 		data = {
 			"PhoneB" : {
 				"BaseDir" : self.INSTALL_PATH,
@@ -80,15 +81,14 @@ class Install(object):
 				"EnableErrorUpdates" : "1",
 				"EnableClientActionUpdates" : "1"
 			},
-			#"MysqlFonB": MySQLSettings().get(),
+			"MysqlFonB": mysql_settings.get(),
 			"AMI" : AMISettings().get(),
 			"MysqlCdr" : cdr_setup.get(),
 		}
-		data["MysqlFonB"] = data["MysqlCdr"]
-		del data["MysqlFonB"]["Table"]
 		cdr_columns_added = False
 		if data["MysqlFonB"]["Username"] == "root":
 			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlFonB"]["Username"], data["MysqlFonB"]["Password"], data["MysqlCdr"]["Database"])
+			mysql_settings.fixOldPasswords()
 		if not cdr_columns_added:
 			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlCdr"]["Username"], data["MysqlCdr"]["Password"], data["MysqlCdr"]["Database"])		
 			if not cdr_columns_added:
@@ -319,10 +319,10 @@ class MySQLSettings(object):
 	def get(self):
 		log("FonB needs access to a MySQL database to store data. Please provide MySQL username, password and database name.")
 		data = {
-			"Username" : raw_input("Mysql username[root]:") or "root",
-			"Password" : getpass.getpass("Password:"),
-			"Database" : raw_input("Database Name[fonb]:") or "fonb",
-			"Hostname" : raw_input("Hostname[localhost]:") or "localhost",
+			"Username" : "root",
+			"Password" : self.getElastixMySQLPassword(),
+			"Database" : "fonb",
+			"Hostname" : "localhost",
 		}
 		self.db = Mysql(data["Username"], data["Password"])
 		if data['Username'] == 'root' and data['Hostname'] == 'localhost':
@@ -332,6 +332,15 @@ class MySQLSettings(object):
 		else:
 			log("Couldn't verify MySQL credentials. We hope they were alright.")
 		return data
+
+	def getElastixMySQLPassword(self):
+		config_parser = FonbConfigParser()
+		file = open("/etc/elastix.conf", "r")
+		ini_str = '[FonB]\n' + file.read()
+		ini_fp = StringIO.StringIO(ini_str)
+		config_parser.readfp(ini_fp)
+		file.close()
+		return config_parser.get("FonB", "mysqlrootpwd")
 
 	def create_db(self, database_name):
 		global Errors
@@ -357,6 +366,40 @@ class MySQLSettings(object):
 			error = "[ WARNING ]: There was some problem in verifying MySQL credentials. Make sure they were alright. You can edit them later in /etc/phoneb/phoneb.cfg"
 			Errors.append(error)
 			log(error)
+
+	def fixOldPasswords(self):
+		config_parser = FonbConfigParser()
+		file_read = config_parser.read("/etc/my.cnf")
+		old_passwords = False
+		if file_read:
+			try:
+				if config_parser.get("mysqld", "old_passwords") == '1':
+					log("Problem found. Trying to fix")
+					config_parser.set("mysqld", "old_passwords", "0")
+					old_passwords =  True
+			except:
+				pass
+			if old_passwords and os.access("/etc/my.cnf", os.W_OK):
+				mysql_conf_file = open("/etc/my.cnf", "w")
+				config_parser.write(mysql_conf_file)
+				mysql_conf_file.close()
+				os.system("service mysqld restart")
+				query = 'UPDATE mysql.user SET Password = PASSWORD("%s") WHERE user = "%s;"' % (self.db.password, self.db.username)
+				fixed = self.db.query(query) == 0 and self.db.query("FLUSH PRIVILEGES;") == 0
+				if fixed:
+					log("Old password error fixed")
+				else:
+					global Errors
+					Errors.append("[ ERROR ]: Old passwords set in /etc/my.cnf check https://github.com/aptus/FonB-Documentation/blob/master/INSTALLATION/TIPS.md#mysqlautherror for details on how to fix it. Query: %s" % query)
+					log("Error occured in fixing old passwords error")
+					config_parser.set("mysqld", "old_passwords", "1")
+					mysql_conf_file = open("/etc/my.cnf", "w")
+					config_parser.write(mysql_conf_file)
+					mysql_conf_file.close()
+			elif old_passwords == False:
+				log("No old passwords problem found.")
+			else:
+				log("Write permissions denied in /etc/my.cnf")
 
 class GlibcCheck(object):
 	def __init__(self, install_path):
@@ -623,7 +666,6 @@ if __name__ == "__main__":
 	parser = OptionParser(description = "Install Aptus FonB")
 	parser.add_option('-i', '--install', help = "Download and install FonB", action="store_true")
 	parser.add_option('-v', '--version', action="store_true", help = "Show installation script version")
-	parser.add_option('-f', '--freepbx', action="store_true", help = "Install Freepbx module")
 	parser.add_option('-u', '--uninstall', action="store_true", help = "Uninstall FonB")
 	cmd_args, crap = parser.parse_args()
 
