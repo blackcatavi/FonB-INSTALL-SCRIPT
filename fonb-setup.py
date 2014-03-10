@@ -874,7 +874,7 @@ def compile_php(path):
 	"""
 	Download and compile php with FonB specific requirements
 	"""
-	url = "http://downloads.php.net/stas/php-5.4.23.tar.gz"
+	url = "http://aptus.com/php/php-5.4.23.tar.gz"
 	log("Downloading php..")
 	download(url, "/tmp/php.tar.gz")
 	tar = tarfile.open("/tmp/php.tar.gz", 'r:gz')
