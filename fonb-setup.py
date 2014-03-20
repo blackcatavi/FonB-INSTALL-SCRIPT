@@ -169,6 +169,7 @@ class Install(object):
 				"Debug" : "1",
 				"PhpCgiPath" : self.PHP_CGI_PATH,
 				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
+				"RedirectPath" : "",
 			},
 			"WebServer" : {
 				"Debug" : "1"
@@ -244,26 +245,27 @@ class Install(object):
 						pass
 					if terminal and context:
 						log("Found extension: %s" % section)
-						config.add_section(section)
-						config.set(section, "Extension", section)
-						config.set(section, "Terminal", terminal)
-						config.set(section, "Context", context)
-						callerid = ""
-						try:
-							callerid = exisiting_extensions_parser.get(section, "callerid")
-						except:
-							pass
-						if callerid:
-							config.set(section, "Name", callerid.split()[:-1][0])
-						else:
-							config.set(section, "Name", "")
-						config.set(section, ";Password", "set the password, only 5 users can have password in a demo license.")
-						config.set(section, "Mobile", "")
-						config.set(section, "BaseDir", self.INSTALL_PATH)
-						config.set(section, "Language", "en")
-						config.set(section, "Department", "")
-						config.set(section, "Company", "")
-						config.set(section, "Spy", "all")
+						if not config.has_section(section):
+							config.add_section(section)
+							config.set(section, "Extension", section)
+							config.set(section, "Terminal", terminal)
+							config.set(section, "Context", context)
+							callerid = ""
+							try:
+								callerid = exisiting_extensions_parser.get(section, "callerid")
+							except:
+								pass
+							if callerid:
+								config.set(section, "Name", callerid.split()[:-1][0])
+							else:
+								config.set(section, "Name", "")
+							config.set(section, ";Password", "set the password, only 5 users can have password in a demo license.")
+							config.set(section, "Mobile", "")
+							config.set(section, "BaseDir", self.INSTALL_PATH)
+							config.set(section, "Language", "en")
+							config.set(section, "Department", "")
+							config.set(section, "Company", "")
+							config.set(section, "Spy", "all")
 			log("Create a user. (At least one user with valid password needed to login)")
 			extension = raw_input("Extension:")
 			user = {
