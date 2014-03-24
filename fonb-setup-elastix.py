@@ -89,7 +89,7 @@ class Install(object):
 		cdr_columns_added = False
 		if data["MysqlFonB"]["Username"] == "root":
 			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlFonB"]["Username"], data["MysqlFonB"]["Password"], data["MysqlCdr"]["Database"])
-			mysql_settings.fixOldPasswords()
+			mysql_settings.fixOldPasswords(data["MysqlCdr"]["Username"], data["MysqlCdr"]["Password"])
 		if not cdr_columns_added:
 			cdr_columns_added = cdr_setup.add_highrise_columns(data["MysqlCdr"]["Username"], data["MysqlCdr"]["Password"], data["MysqlCdr"]["Database"])		
 			if not cdr_columns_added:
@@ -369,13 +369,13 @@ class MySQLSettings(object):
 			Errors.append(error)
 			log(error)
 
-	def fixOldPasswords(self):
+	def fixOldPasswords(self, cdr_uname, cdr_password):
 		config_parser = FonbConfigParser()
 		file_read = config_parser.read("/etc/my.cnf")
 		old_passwords = False
 		if file_read:
 			try:
-				if config_parser.get("mysqld", "old_passwords") == '1':
+				if self.haveOldPasswordProblem(cdr_uname):
 					log("Problem found. Trying to fix")
 					config_parser.set("mysqld", "old_passwords", "0")
 					old_passwords =  True
@@ -387,6 +387,8 @@ class MySQLSettings(object):
 				mysql_conf_file.close()
 				os.system("service mysqld restart")
 				query = 'UPDATE mysql.user SET Password = PASSWORD("%s") WHERE user = "%s";' % (self.db.password, self.db.username)
+				if cdr_uname != self.db.username and cdr_password:
+					query = query + 'UPDATE mysql.user SET Password = PASSWORD("%s") WHERE user = "%s";' % (cdr_password, cdr_uname)
 				fixed = self.db.query(query) == 0 and self.db.query("FLUSH PRIVILEGES;") == 0
 				if fixed:
 					log("Old password error fixed")
@@ -402,6 +404,14 @@ class MySQLSettings(object):
 				log("No old passwords problem found.")
 			else:
 				log("Write permissions denied in /etc/my.cnf")
+
+	def haveOldPasswordProblem(self, cdr_uname):
+		query = 'SELECT LENGTH(password) from mysql.user where user IN("root", "%s");' % cdr_uname
+		response = self.db.result(query).read()
+		if "16" in response:
+			return True
+		else:
+			return False
 
 class GlibcCheck(object):
 	def __init__(self, install_path):
