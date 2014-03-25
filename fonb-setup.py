@@ -751,8 +751,7 @@ def init_script(demon_path):
 	Outputs init script
 	"""
 	demon_path = demon_path.rstrip('/')
-	return """
-#!/bin/bash
+	return """#!/bin/bash
 # phoneb daemon
 # chkconfig: 345 20 80
 # description: phoneb daemon
@@ -769,61 +768,53 @@ SCRIPTNAME="/etc/init.d/$NAME"
 
 case "$1" in
 start)
-		printf "%%-50s" "Starting $NAME..."
-		if [ -f $PIDFILE ]; then
-			PID=`cat $PIDFILE`
-			if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
-				printf "%%s\n" "Process dead but pidfile exists. Use /etc/init.d/phoneb restart"
-			else
-				echo "Process already running pid: $PID"
-			fi
+	printf "%%-50s" "Starting $NAME..."
+	PID="`pidof $DAEMON`"
+	if ! [ -z "$PID" ]; then
+		echo "Process already running pid: $PID"
+	else
+		PID="`$DAEMON_PATH/$DAEMON  >> /var/log/messages 2>&1 & echo $!`"
+		PID="`pidof $DAEMON`"
+		if [ -z $PID ]; then
+			printf "%%s
+" "Fail"
 		else
-				PID=`$DAEMON_PATH/$DAEMON  >> /var/log/messages 2>&1 & echo $!`     #for Ubuntu 11.04 or above, use
-																			#/var/log/syslog instead
-				#echo "$DAEMON > /dev/null 2>&1 & echo $!"
-				if [ -z $PID ]; then
-						printf "%%s\n" "Fail"
-				else
-						echo $PID > $PIDFILE
-						printf "%%s\n" "Ok"
-						#echo "Saving PID" $PID " to " $PIDFILE
-				fi
+			printf "%%s
+" "Ok"
 		fi
+	fi
 ;;
 status)
-		printf "%%-50s" "Checking $NAME..."
-		if [ -f $PIDFILE ]; then
-			PID=`cat $PIDFILE`
-			if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
-				printf "%%s\n" "Process dead but pidfile exists"
-			else
-				echo "Running"
-			fi
-		else
-			printf "%%s\n" "Service not running"
-		fi
+	printf "%%-50s" "Checking $NAME..."
+	PID=`pidof $DAEMON`
+	if ! [ -z $PID ]; then
+		echo "Running"
+	else
+		printf "%%s
+" "Service not running"
+	fi
 ;;
 stop)
-		printf "%%-50s" "Stopping $NAME"
-			PID=`cat $PIDFILE`
-			cd $DAEMON_PATH
-		if [ -f $PIDFILE ]; then
-			kill -HUP $PID
-			printf "%%s\n" "Ok"
-			rm -f $PIDFILE
+	printf "%%-50s" "Stopping $NAME"
+	PID=`pidof $DAEMON`
+	if ! [ -z $PID ]; then
+		killall $DAEMON
+		printf "%%s
+" "Ok"
 		else
-			printf "%%s\n" "pidfile not found"
+			printf "%%s
+" "Fail"
 		fi
 ;;
 
 restart)
-		$0 stop
-		$0 start
+	$0 stop
+	$0 start
 ;;
 
 *)
-		echo "Usage: $0 {status|start|stop|restart}"
-		exit 1
+	echo "Usage: $0 {status|start|stop|restart}"
+	exit 1
 esac
 """	% demon_path
 #####################end of init_script############
