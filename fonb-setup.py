@@ -91,7 +91,7 @@ class Install(object):
 			log("To setup passwords for extensions edit '/etc/phoneb/users.cfg'")
 			log("To activate phoneb with licenses use '%s'" % os.path.join(self.INSTALL_PATH, "bin", "./phoneb --activate \"your license key here\""))
 			log("To report bugs or to find further documentation visit http://aptus.com")
-			log("Installation messages have been logged to fonb-setup.log. If problems occured during installation include this file in your bug report.")
+			log("Installation messages have been logged to /var/log/fonb-setup.log. If problems occured during installation include this file in your bug report.")
 		else:
 			log("Error occured in starting PhoneB. Try running this script with root privilleges or setup init.d script manually.")
 
@@ -1003,7 +1003,7 @@ class Uninstall(object):
 			os.remove("/etc/init.d/phoneb")
 			log("init script removed")
 
-log_file = open("fonb-setup.log", "w")
+log_file = open("/var/log/fonb-setup.log", "w")
 
 def log(message):
 	print(message)

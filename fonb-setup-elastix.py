@@ -663,7 +663,7 @@ class Uninstall(object):
 			os.remove("/etc/init.d/phoneb")
 			log("init script removed")
 
-log_file = open("fonb-setup.log", "w")
+log_file = open("/var/log/fonb-setup.log", "w")
 
 def log(message):
 	print(message)
