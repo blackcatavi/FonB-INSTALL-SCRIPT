@@ -157,7 +157,10 @@ class Install(object):
 		global Errors
 		config = FonbConfigParser()
 		log("Creating phoneb.cfg file")
-		config.read("/etc/phoneb/phoneb.cfg")
+		try:
+			config.read("/etc/phoneb/phoneb.cfg")
+		except:
+			pass
 		cdr_setup = CDRSettings()
 		mysql_settings = MySQLSettings()
 		data = {
@@ -169,7 +172,7 @@ class Install(object):
 				"Debug" : "1",
 				"PhpCgiPath" : self.PHP_CGI_PATH,
 				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
-				"RedirectPath" : "",
+				"RedirectPath" : "fonb",
 			},
 			"WebServer" : {
 				"Debug" : "1"
@@ -645,7 +648,7 @@ class LameCheck(object):
 	
 	def compile(self):
 		global Errors
-		return_code = os.system("cd /usr/src && wget http://sourceforge.net/projects/lame/files/lame/3.98.4/lame-3.98.4.tar.gz && tar -xf lame-3.98.4.tar.gz && cd lame-3.98.4 && ./configure && make && make install")
+		return_code = os.system("cd /usr/src && wget http://aptus.com/install/lame-3.98.4.tar.gz && tar -xf lame-3.98.4.tar.gz && cd lame-3.98.4 && ./configure && make && make install")
 		if return_code != 0:
 			error = "[ ERROR ]: Couldn't compile lame properly. Call recording wont work without lame."
 			log(error)
@@ -768,53 +771,61 @@ SCRIPTNAME="/etc/init.d/$NAME"
 
 case "$1" in
 start)
-	printf "%%-50s" "Starting $NAME..."
-	PID="`pidof $DAEMON`"
-	if ! [ -z "$PID" ]; then
-		echo "Process already running pid: $PID"
-	else
-		PID="`$DAEMON_PATH/$DAEMON  >> /var/log/messages 2>&1 & echo $!`"
-		PID="`pidof $DAEMON`"
-		if [ -z $PID ]; then
-			printf "%%s
-" "Fail"
-		else
-			printf "%%s
-" "Ok"
-		fi
-	fi
+        printf "%%-50s" "Starting $NAME..."
+        if [ -f $PIDFILE ]; then
+            PID=`cat $PIDFILE`
+            if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
+                printf "%%s\\n" "Process dead but pidfile exists. Use /etc/init.d/phoneb restart"
+            else
+                echo "Process already running pid: $PID"
+            fi
+        else
+                PID=`$DAEMON_PATH/$DAEMON  >> /var/log/messages 2>&1 & echo $!`     #for Ubuntu 11.04 or above, use
+                                                                            #/var/log/syslog instead
+                #echo "$DAEMON > /dev/null 2>&1 & echo $!"
+                if [ -z $PID ]; then
+                        printf "%%s\\n" "Fail"
+                else
+                        echo $PID > $PIDFILE
+                        printf "%%s\\n" "Ok"
+                        #echo "Saving PID" $PID " to " $PIDFILE
+                fi
+        fi
 ;;
 status)
-	printf "%%-50s" "Checking $NAME..."
-	PID=`pidof $DAEMON`
-	if ! [ -z $PID ]; then
-		echo "Running"
-	else
-		printf "%%s
-" "Service not running"
-	fi
+        printf "%%-50s" "Checking $NAME..."
+        if [ -f $PIDFILE ]; then
+            PID=`cat $PIDFILE`
+            if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
+                printf "%%s\\n" "Process dead but pidfile exists"
+            else
+                echo "Running"
+            fi
+        else
+            printf "%%s\\n" "Service not running"
+        fi
 ;;
 stop)
-	printf "%%-50s" "Stopping $NAME"
-	PID=`pidof $DAEMON`
-	if ! [ -z $PID ]; then
-		killall $DAEMON
-		printf "%%s
-" "Ok"
-		else
-			printf "%%s
-" "Fail"
-		fi
+        printf "%%-50s" "Stopping $NAME"
+            PID=`cat $PIDFILE`
+            cd $DAEMON_PATH
+        if [ -f $PIDFILE ]; then
+            kill -HUP $PID
+            printf "%%s\\n" "Ok"
+            rm -f $PIDFILE
+        else
+            printf "%%s\\n" "pidfile not found"
+        fi
 ;;
 
 restart)
-	$0 stop
-	$0 start
+        $0 stop
+        $0 start
 ;;
 
 *)
-	echo "Usage: $0 {status|start|stop|restart}"
-	exit 1
+        echo "Usage: $0 {status|start|stop|restart}"
+        exit 1
 esac
 """	% demon_path
 #####################end of init_script############
@@ -877,7 +888,7 @@ def compile_php(path):
 	"""
 	Download and compile php with FonB specific requirements
 	"""
-	url = "http://aptus.com/php/php-5.4.23.tar.gz"
+	url = "http://aptus.com/install/php-5.4.23.tar.gz"
 	log("Downloading php..")
 	download(url, "/tmp/php.tar.gz")
 	tar = tarfile.open("/tmp/php.tar.gz", 'r:gz')
