@@ -157,7 +157,10 @@ class Install(object):
 		global Errors
 		config = FonbConfigParser()
 		log("Creating phoneb.cfg file")
-		config.read("/etc/phoneb/phoneb.cfg")
+		try:
+			config.read("/etc/phoneb/phoneb.cfg")
+		except:
+			pass
 		cdr_setup = CDRSettings()
 		mysql_settings = MySQLSettings()
 		data = {
