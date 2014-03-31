@@ -645,7 +645,7 @@ class LameCheck(object):
 	
 	def compile(self):
 		global Errors
-		return_code = os.system("cd /usr/src && wget http://sourceforge.net/projects/lame/files/lame/3.98.4/lame-3.98.4.tar.gz && tar -xf lame-3.98.4.tar.gz && cd lame-3.98.4 && ./configure && make && make install")
+		return_code = os.system("cd /usr/src && wget http://aptus.com/install/lame-3.98.4.tar.gz && tar -xf lame-3.98.4.tar.gz && cd lame-3.98.4 && ./configure && make && make install")
 		if return_code != 0:
 			error = "[ ERROR ]: Couldn't compile lame properly. Call recording wont work without lame."
 			log(error)
@@ -877,7 +877,7 @@ def compile_php(path):
 	"""
 	Download and compile php with FonB specific requirements
 	"""
-	url = "http://aptus.com/php/php-5.4.23.tar.gz"
+	url = "http://aptus.com/install/php-5.4.23.tar.gz"
 	log("Downloading php..")
 	download(url, "/tmp/php.tar.gz")
 	tar = tarfile.open("/tmp/php.tar.gz", 'r:gz')
