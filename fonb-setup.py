@@ -172,7 +172,7 @@ class Install(object):
 				"Debug" : "1",
 				"PhpCgiPath" : self.PHP_CGI_PATH,
 				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
-				"RedirectPath" : "",
+				"RedirectPath" : "fonb",
 			},
 			"WebServer" : {
 				"Debug" : "1"
