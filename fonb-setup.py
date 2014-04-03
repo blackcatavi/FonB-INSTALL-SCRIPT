@@ -72,6 +72,7 @@ class Install(object):
 		log("Checking glibc requirement")
 		GlibcCheck(self.INSTALL_PATH).check()
 		self.add_mobile_config()
+		self.create_ignorefile()
 		self.activate()
 		log("Trying to start phoneb. By executing /etc/init.d/phoneb start")
 		result  = os.system("/etc/init.d/phoneb restart")
@@ -173,6 +174,8 @@ class Install(object):
 				"PhpCgiPath" : self.PHP_CGI_PATH,
 				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
 				"RedirectPath" : "fonb",
+				"AsteriskVoiceMailPath" : "/var/spool/asterisk/voicemail",
+				"CallHistoryIgnoreFile" : "/etc/phoneb/callhistoryignore.cfg", 
 			},
 			"WebServer" : {
 				"Debug" : "1"
@@ -218,6 +221,17 @@ class Install(object):
 				iax_file.write("\n#include iax_fonb_mobile.conf")
 				iax_file.close()
 
+	def create_ignorefile(self, path="/etc/phoneb/callhistoryignore.cfg"):
+		global Errors
+		if os.access("/etc/phoneb", os.W_OK):
+			log("Writing call history ignore file")
+			ignore_file = open(path, "w")
+			ignore_file.write(callhistory_ignorefile())
+			ignore_file.close()
+		else:
+			error = "[ ERROR ]: Couldn't write call history ignore file."
+			log(error)
+			Errors.append(error)
 
 	def create_users_config_file(self, config_path):
 		"""
@@ -829,6 +843,31 @@ restart)
 esac
 """	% demon_path
 #####################end of init_script############
+
+def callhistory_ignorefile():
+	return """
+;--------------------------------------------------------------------------------------------------------------------------------
+;This file contains line spearated list of numbers that are to be ignored while listing call history on Aptus FonB interface.   -
+;Asterik(*) is wild card and can be escaped by using a backslash(\).                                                            -
+;You can define numbers which begin with, end with, contain or are equal to a certain pattern                                   -
+;A semi colon(;) can be used to comment.                                                                                        -
+;No double/single quotes, whitespace or non alpha numeric charachters other than * and + are allowed in patterns.               -
+;Backslash is only allowed with *.                                                                                              -
+;============================                                                                                                   -
+;Following are example usages:                                                                                                  -
+;============================                                                                                                   -
+;056* ;starts with 056                                                                                                          -
+;*456 ;ends with 456                                                                                                            -
+;\*97 ;equals *97                                                                                                               -
+;s    ;equals s                                                                                                                 -       
+;hold ;equals hold                                                                                                              -
+;ring ;equals ring                                                                                                              -
+;+1*  ;don't list calls from USA                                                                                                -
+;--------------------------------------------------------------------------------------------------------------------------------
+s
+hold
+ring
+"""
 
 def php_requirements(php_cgi_path):
 	php_modules = os.popen("%s -m" % php_cgi_path).readlines()
