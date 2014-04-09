@@ -170,7 +170,7 @@ class Install(object):
 				"UsersConfFile" : os.path.join(config_path, "users.cfg"),
 				"ListenPort" : raw_input("FonB Server Port[%s]:" % self.PORT) or self.PORT,
 				"LameExec" : LameCheck(self.INSTALL_PATH).get_path(),
-				"Debug" : "1",
+				"Debug" : "0",
 				"PhpCgiPath" : self.PHP_CGI_PATH,
 				"AsteriskMonitorPath" : "/var/spool/asterisk/monitor",
 				"RedirectPath" : "fonb",
@@ -178,16 +178,10 @@ class Install(object):
 				"CallHistoryIgnoreFile" : "/etc/phoneb/callhistoryignore.cfg", 
 			},
 			"WebServer" : {
-				"Debug" : "1"
+				"Debug" : "0"
 			},
 			"WebSocket": {
-				"Debug" : "1",
-				"EnableAmiUpdates" : "1",
-				"EnableSummaryUpdates" : "1",
-				"EnableHangupUpdates" : "1",
-				"EnableFeedbackUpdates" : "1",
-				"EnableErrorUpdates" : "1",
-				"EnableClientActionUpdates" : "1"
+				"Debug" : "0",
 			},
 			"MysqlFonB": mysql_settings.get(),
 			"AMI" : AMISettings().get(),
