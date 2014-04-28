@@ -6,6 +6,9 @@ from ConfigParser import RawConfigParser
 
 Errors = []
 
+if sys.version_info[0] != 2 or sys.version_info[1] < 4:
+	sys.exit("Installation script needs at least Python 2.4 to work.")
+	
 class Install(object):
 	"""
 	Initialize an object of this class to start installation

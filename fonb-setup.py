@@ -1,8 +1,50 @@
 #!/usr/bin/env python
-import sys, urllib2, tarfile, zipfile, os, getpass, stat, StringIO, platform, shutil, glob, re
+import sys, urllib2, tarfile, zipfile, os, getpass, stat, StringIO, platform, shutil, glob, re, copy
 from optparse import OptionParser
 from distutils import spawn
 from ConfigParser import RawConfigParser
+
+if sys.version_info[0] != 2 or sys.version_info[1] < 4:
+	sys.exit("Installation script needs at least Python 2.4 to work.")
+#extractall method is not available in python 2.4 so we will monkey patch it
+if sys.version_info[1] == 4:
+	def extractall(self, path=".", members=None):
+		"""Extract all members from the archive to the current working
+		   directory and set owner, modification time and permissions on
+		   directories afterwards. `path' specifies a different directory
+		   to extract to. `members' is optional and must be a subset of the
+		   list returned by getmembers().
+		"""
+		directories = []
+
+		if members is None:
+			members = self
+
+		for tarinfo in members:
+			if tarinfo.isdir():
+				# Extract directories with a safe mode.
+				directories.append(tarinfo)
+				tarinfo = copy.copy(tarinfo)
+				tarinfo.mode = 0700
+			self.extract(tarinfo, path)
+
+		# Reverse sort directories.
+		directories.sort(key=operator.attrgetter('name'))
+		directories.reverse()
+
+		# Set correct owner, mtime and filemode on directories.
+		for tarinfo in directories:
+			dirpath = os.path.join(path, tarinfo.name)
+			try:
+				self.chown(tarinfo, dirpath)
+				self.utime(tarinfo, dirpath)
+				self.chmod(tarinfo, dirpath)
+			except ExtractError, e:
+				if self.errorlevel > 1:
+					raise
+				else:
+					self._dbg(1, "tarfile: %s" % e)
+	tarfile.extractall = classmethod(extractall)
 
 Errors = []
 
@@ -707,10 +749,10 @@ class ActiveCallsSetup(object):
 			self.can_access = True
 			try:
 				config_parser.OPTCRE = re.compile(
-			        r'(?P<option>[^\[]*)'          
-			        r'(?P<vi>[^\[]*)'              
-			        r'(?P<value>[^\[]*)$'
-			        )
+					r'(?P<option>[^\[]*)'          
+					r'(?P<vi>[^\[]*)'              
+					r'(?P<value>[^\[]*)$'
+					)
 				config_parser.read(self.config_file)
 				self.config_parser = config_parser
 			except:
@@ -779,61 +821,61 @@ SCRIPTNAME="/etc/init.d/$NAME"
 
 case "$1" in
 start)
-        printf "%%-50s" "Starting $NAME..."
-        if [ -f $PIDFILE ]; then
-            PID=`cat $PIDFILE`
-            if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
-                printf "%%s\\n" "Process dead but pidfile exists. Use /etc/init.d/phoneb restart"
-            else
-                echo "Process already running pid: $PID"
-            fi
-        else
-                PID=`$DAEMON_PATH/$DAEMON  >> /var/log/messages 2>&1 & echo $!`     #for Ubuntu 11.04 or above, use
-                                                                            #/var/log/syslog instead
-                #echo "$DAEMON > /dev/null 2>&1 & echo $!"
-                if [ -z $PID ]; then
-                        printf "%%s\\n" "Fail"
-                else
-                        echo $PID > $PIDFILE
-                        printf "%%s\\n" "Ok"
-                        #echo "Saving PID" $PID " to " $PIDFILE
-                fi
-        fi
+	printf "%%-50s" "Starting $NAME..."
+	if [ -f $PIDFILE ]; then
+		PID=`cat $PIDFILE`
+		if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
+			printf "%%s\\n" "Process dead but pidfile exists. Use /etc/init.d/phoneb restart"
+		else
+			echo "Process already running pid: $PID"
+		fi
+	else
+			PID=`$DAEMON_PATH/$DAEMON  >> /var/log/messages 2>&1 & echo $!`     #for Ubuntu 11.04 or above, use
+																		#/var/log/syslog instead
+			#echo "$DAEMON > /dev/null 2>&1 & echo $!"
+			if [ -z $PID ]; then
+					printf "%%s\\n" "Fail"
+			else
+					echo $PID > $PIDFILE
+					printf "%%s\\n" "Ok"
+					#echo "Saving PID" $PID " to " $PIDFILE
+			fi
+	fi
 ;;
 status)
-        printf "%%-50s" "Checking $NAME..."
-        if [ -f $PIDFILE ]; then
-            PID=`cat $PIDFILE`
-            if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
-                printf "%%s\\n" "Process dead but pidfile exists"
-            else
-                echo "Running"
-            fi
-        else
-            printf "%%s\\n" "Service not running"
-        fi
+	printf "%%-50s" "Checking $NAME..."
+	if [ -f $PIDFILE ]; then
+		PID=`cat $PIDFILE`
+		if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
+			printf "%%s\\n" "Process dead but pidfile exists"
+		else
+			echo "Running"
+		fi
+	else
+		printf "%%s\\n" "Service not running"
+	fi
 ;;
 stop)
-        printf "%%-50s" "Stopping $NAME"
-            PID=`cat $PIDFILE`
-            cd $DAEMON_PATH
-        if [ -f $PIDFILE ]; then
-            kill -HUP $PID
-            printf "%%s\\n" "Ok"
-            rm -f $PIDFILE
-        else
-            printf "%%s\\n" "pidfile not found"
-        fi
+	printf "%%-50s" "Stopping $NAME"
+		PID=`cat $PIDFILE`
+		cd $DAEMON_PATH
+	if [ -f $PIDFILE ]; then
+		kill -HUP $PID
+		printf "%%s\\n" "Ok"
+		rm -f $PIDFILE
+	else
+		printf "%%s\\n" "pidfile not found"
+	fi
 ;;
 
 restart)
-        $0 stop
-        $0 start
+	$0 stop
+	$0 start
 ;;
 
 *)
-        echo "Usage: $0 {status|start|stop|restart}"
-        exit 1
+	echo "Usage: $0 {status|start|stop|restart}"
+	exit 1
 esac
 """	% demon_path
 #####################end of init_script############
