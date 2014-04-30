@@ -1076,9 +1076,9 @@ class Uninstall(object):
 
 	def remove_db(self):
 		username = self.config_parser.get("MysqlFonB", "Username")
-		if username:
+		database = self.config_parser.get("MysqlFonB", "Database")
+		if username == 'root' and database == 'fonb':
 			log("Dropping database.")
-			database = self.config_parser.get("MysqlFonB", "Database")
 			db = Mysql(username,self.config_parser.get("MysqlFonB", "Password"),database)
 			response = db.query("drop database %s;" % database)
 			if response != 0:
@@ -1087,7 +1087,7 @@ class Uninstall(object):
 			else:
 				log("Database dropped.")
 		else:
-			log("[ ERROR ]: Username not found in phoneb.cfg")
+			log("[ ERROR ]: Didn't drop database")
 			self.error_happened = True
 
 	def remove_freepbx(self):
