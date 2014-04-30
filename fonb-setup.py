@@ -505,7 +505,7 @@ class MySQLSettings(object):
 			ampfile = open('/etc/amportal.conf', "r")
 			ini_str = '[FonB]\n' + file.read()
 			ini_fp = StringIO.StringIO(ini_str)
-			amportal.readfp(ini_str)
+			amportal.readfp(ini_fp)
 			data = {
 				"Username" : amportal.get("FonB", "AMPDBUSER"),
 				"Password" : amportal.get("FonB", "AMPDBPASS"),
