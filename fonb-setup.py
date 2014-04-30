@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, urllib2, tarfile, zipfile, os, getpass, stat, StringIO, platform, shutil, glob, re, copy
+import sys, urllib2, tarfile, zipfile, os, getpass, stat, StringIO, platform, shutil, glob, re, copy, operator
 from optparse import OptionParser
 from distutils import spawn
 from ConfigParser import RawConfigParser
@@ -44,7 +44,7 @@ if sys.version_info[1] == 4:
 					raise
 				else:
 					self._dbg(1, "tarfile: %s" % e)
-	tarfile.extractall = classmethod(extractall)
+	tarfile.TarFile.extractall = extractall
 
 Errors = []
 
@@ -498,12 +498,29 @@ class MySQLSettings(object):
 
 	def get(self):
 		log("FonB needs access to a MySQL database to store data. Please provide MySQL username, password and database name.")
-		data = {
-			"Username" : raw_input("Mysql username[root]:") or "root",
-			"Password" : getpass.getpass("Password:"),
-			"Database" : raw_input("Database Name[fonb]:") or "fonb",
-			"Hostname" : raw_input("Hostname[localhost]:") or "localhost",
-		}
+		log("checking for amportal file")
+		data = dict()
+		try:
+			amportal = FonbConfigParser()
+			ampfile = open('/etc/amportal.conf', "r")
+			ini_str = '[FonB]\n' + file.read()
+			ini_fp = StringIO.StringIO(ini_str)
+			amportal.readfp(ini_str)
+			data = {
+				"Username" : amportal.get("FonB", "AMPDBUSER"),
+				"Password" : amportal.get("FonB", "AMPDBPASS"),
+				"Database" : amportal.get("FonB", "AMPDBNAME"),
+				"Hostname" : amportal.get("FonB", "AMPDBHOST"),
+			}
+			log("using amportal.conf credentials for fonb database")
+		except:
+			log("amportal file not found or isn't readable")
+			data = {
+				"Username" : raw_input("Mysql username[root]:") or "root",
+				"Password" : getpass.getpass("Password:"),
+				"Database" : raw_input("Database Name[fonb]:") or "fonb",
+				"Hostname" : raw_input("Hostname[localhost]:") or "localhost",
+			}
 		self.db = Mysql(data["Username"], data["Password"])
 		if data['Username'] == 'root' and data['Hostname'] == 'localhost':
 			self.create_db(data["Database"])
