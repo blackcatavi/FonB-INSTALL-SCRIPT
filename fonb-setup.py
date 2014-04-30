@@ -503,7 +503,7 @@ class MySQLSettings(object):
 		try:
 			amportal = FonbConfigParser()
 			ampfile = open('/etc/amportal.conf', "r")
-			ini_str = '[FonB]\n' + file.read()
+			ini_str = '[FonB]\n' + ampfile.read()
 			ini_fp = StringIO.StringIO(ini_str)
 			amportal.readfp(ini_fp)
 			data = {
