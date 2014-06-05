@@ -488,6 +488,7 @@ class CDRSettings(object):
 		 status = db.has_column("cdr", "FonBCallUniqueID") or db.query("ALTER TABLE cdr ADD FonBCallUniqueID VARCHAR(80) NOT NULL;") == 0
 		 status = status and (db.has_column("cdr", "FonBCallNotes") or db.query("ALTER TABLE cdr ADD FonBCallNotes VARCHAR(80) NOT NULL;") == 0)
 		 status = status and (db.has_column("cdr", "FonBHighriseNoteID") or db.query("ALTER TABLE cdr ADD FonBHighriseNoteID VARCHAR(80) NOT NULL;") == 0)
+		 status = status and (db.has_column("cdr", "recordingfile") or db.query("ALTER TABLE cdr ADD recordingfile VARCHAR(80) NOT NULL;") == 0)
 		 return status
 
 
