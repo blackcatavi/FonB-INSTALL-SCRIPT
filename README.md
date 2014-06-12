@@ -1,38 +1,18 @@
-This Python script can download and install PhoneB and required dependencies.
+FonB-Documentation
+==================
+Welcome to the Aptus FonB Getting Started Home. This is the starting line to find any up to date Installation & Post Installation resource for FonB.
+By the time you reached at this page, it is assumed that you now have a valid License Activation Key to activate the product. In case you don't, simply register for an account [here](http://aptus.com/download.html) and receive your 30 days trial activation keys right now.
 
-Usage
-------
-`python fonb-setup.py -i`
+Given below is the list of resources for FonB Backend Installation:
 
+* [FonB Installation Guide for FreePBX Users]()
+* [FonB Installation Guide for Elastix Users]()
+* [FonB Installation Guide for Other Asterisk Variant Users]()
 
-Options
--------
+Once you install FonB Backend, you will have to use the Frontend. Given below is the list of steps need to go through and complete FonB Installation:
 
-  -h, --help            show this help message and exit
-  
-  -i, --install         Download and install FonB
-  
-  -s /path/to/PhoneB/bin, --init=/path/to/PhoneB/bin
-                        Outputs init.d script. This option expects path to bin
-                        folder of phoneb installation to be passed as argument
-                        
-  -p php-cgi, --php=php-cgi
-                        Validates php requirements for FonB. Expects php-cgi
-                        path as argument.
-                        
-                        
-  -c /path/where/php/will/be/compiled, --prefix=/path/where/php/will/be/compiled
-                        Downloads and compiles php with FonB specific
-                        requirements.
-                        
-  -v, --version         Show installation script version
-  
-  -f, --freepbx         Install Freepbx module
-  
+* [FonB User Portal]()
+* [FonB Mobility for Android]()
+* [FonB Mobility for iPhone]()
+* [FonB XML Apps for IP Phones]()
 
-Requirements
-------
-- Python 2.x (Tested on Python 2.4, 2.5, 2.6 and 2.7)
-- CentOS (Freepbx/Elastix/Stock Asterisks) (Recommended) 
-- Should run on any linux installation with yum. Installation will go smooth in other linux distroes too, but you will have to resolve dependencies on your own)
-- Internet connectivity
