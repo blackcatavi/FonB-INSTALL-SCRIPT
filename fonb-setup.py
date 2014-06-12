@@ -302,7 +302,7 @@ class Install(object):
 							config.add_section(section)
 							config.set(section, "Extension", section)
 							config.set(section, "Terminal", terminal)
-							config.set(section, "Context", context)
+							config.set(section, "Context", "fonb-from-internal ; defined in extensions_custom.conf. you have to include the OnHold Context")
 							callerid = ""
 							try:
 								callerid = exisiting_extensions_parser.get(section, "callerid")
@@ -325,7 +325,7 @@ class Install(object):
 				extension : {
 					"Extension" : extension,
 					"Terminal" : raw_input("Terminal[SIP/%s]:" % (extension)) or ("SIP/%s" % (extension)),
-					"Context" : raw_input("Context[from-internal]:") or "from-internal",
+					"Context" : raw_input("Context[fonb-from-internal]:") or "fonb-from-internal",
 					"Name" : raw_input("Name:"),
 					"Mobile" : raw_input("Mobile:"),
 					"Password" : getpass.getpass("Password:"),
@@ -780,7 +780,7 @@ class ActiveCallsSetup(object):
 
 		if self.can_access:
 			file_sections = self.config_parser.sections()
-			for section in ["OnHold", "Conference", "Hangup"]:
+			for section in ["OnHold", "Conference", "Hangup","fonb-from-internal"]:
 				if section not in file_sections:
 					self.config_parser.add_section(section)
 			self.config_parser.set_bulk("OnHold", [
@@ -802,6 +802,10 @@ class ActiveCallsSetup(object):
 				";Conference test extension: admin",
 				"exten =>  admin,1,MeetMe(${MEETME_ROOMNUM},qdMxp)",
 				"exten =>  admin,n,MeetMeAdmin(${MEETME_ROOMNUM},K)",
+				])
+			self.config_parser.set_bulk("fonb-from-internal", [
+				"include => from-internal",
+				"include => OnHold",
 				])
 			self.config_parser.set_bulk("Hangup", [
 				"exten => Hangup,1,NoCDR()",
