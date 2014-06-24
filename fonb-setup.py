@@ -759,7 +759,7 @@ class ActiveCallsSetup(object):
 	def __init__(self, config_file="/etc/asterisk/extensions_custom.conf"):
 		self.can_access = False
 		self.config_file = config_file
-		self.set_config_parser()
+		#self.set_config_parser()
 
 	def set_config_parser(self):
 		config_parser = FonbConfigParser()
@@ -779,7 +779,7 @@ class ActiveCallsSetup(object):
 	def setup(self):
 
 		if self.can_access:
-			file_sections = self.config_parser.sections()
+			"""file_sections = self.config_parser.sections()
 			for section in ["OnHold", "Conference", "Hangup","fonb-from-internal"]:
 				if section not in file_sections:
 					self.config_parser.add_section(section)
@@ -813,7 +813,34 @@ class ActiveCallsSetup(object):
 				])
 			fp = open(self.config_file, "w")
 			self.config_parser.write(fp)
-			fp.close()
+			fp.close()"""
+			sed '1,$d' self.config_file
+			echo "[OnHold]"
+			echo "exten => s,1,Answer()"
+			eho ";exten => s,2,MusicOnHold()"
+			echo "exten => s,2,Hangup"
+			echo ""
+			echo "exten => hold,1,Answer()"
+			echo "exten => hold,n,MusicOnHold(,3600)"
+			echo "exten => hold,n,Hangup"
+			echo ""
+			echo "exten => wait,1,NoCDR()"
+			echo ";exten => wait,n,StopMixMonitor()"
+			echo "exten => wait,n,Answer()"
+			echo "exten => wait,n,UserEvent(FonBCallSwitch,Channel: ${CHANNEL(name)})"
+			echo "exten => wait,n,Wait(50)"
+			echo "exten => wait,n,Hangup"
+			echo ""
+			echo "[Conference]"
+			echo "exten =>  Conference,1,MeetMe(${MEETME_ROOMNUM},dqMx)"
+			echo ""
+			echo ";Conference test extension: admin"
+			echo "exten =>  admin,1,MeetMe(${MEETME_ROOMNUM},qdMxp)"
+			echo "exten =>  admin,n,MeetMeAdmin(${MEETME_ROOMNUM},K)"
+			echo ""
+			echo "[Hangup]"
+			echo "exten => Hangup,1,NoCDR()"
+			echo "exten => Hangup,n,Hangup()"
 			log("Restarting asterisk")
 			os.system("service asterisk restart")
 			return True
